@@ -1,0 +1,107 @@
+﻿Build1=Default,b4a.example
+File1=MainLayout.bal
+FileGroup1=Default Group
+Group=Default Group
+Library1=core
+Library2=xui
+Library3=ble2
+Library4=runtimepermissions
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="14" android:targetSdkVersion="29"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~AddPermission(android.permission.ACCESS_FINE_LOCATION)~\n~
+Module1=Starter
+NumberOfFiles=1
+NumberOfLibraries=4
+NumberOfModules=1
+Version=10.2
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: Mi Clock Updater
+	#VersionCode: 1
+	#VersionName: 
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: True
+#End Region
+
+Sub Process_Globals
+	'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+	Private xui As XUI
+End Sub
+
+Sub Globals
+	'These global variables will be redeclared each time the activity is created.
+	Private device_list As ListView
+	Private progress_bar As ProgressBar
+	Private do_button As Button
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.LoadLayout("MainLayout")
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+Sub do_button_Click
+	do_button.Enabled = False
+	progress_bar.Progress = 0
+
+	Select Starter.currentState
+		Case Starter.manager.STATE_UNSUPPORTED
+			xui.MsgboxAsync("Error", "Bluetooth not supported")
+			do_button.Enabled = True
+			Return
+			
+		Case Starter.manager.STATE_POWERED_OFF
+			xui.MsgboxAsync("Error", "Bluetooth not enabled")
+			do_button.Enabled = True
+			Return
+	End Select
+
+	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
+	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
+
+	If Result = False Then
+		do_button.Enabled = True
+		Return
+	End If
+
+	Starter.StartUpdate
+	device_list.Clear
+End Sub
+
+Sub DeviceFound
+	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
+	device_list.AddTwoLines("🕒 " & dev.Name, dev.Mac)
+End Sub
+
+Sub DeviceSucceeded
+	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
+	device_list.RemoveAt(device_list.Size - 1)
+	device_list.AddTwoLines("✔️ " & dev.Name, dev.Mac)
+End Sub
+
+Sub DeviceFailed
+	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
+	device_list.RemoveAt(device_list.Size - 1)
+	device_list.AddTwoLines("❌ " & dev.Name, dev.Mac)
+End Sub
+
+Sub UpdateAborted
+	xui.MsgboxAsync("Error", "Update aborted")
+	do_button.Enabled = True
+End Sub
+
+Sub FinishedProcessing
+	do_button.Enabled = True
+End Sub
