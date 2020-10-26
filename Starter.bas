@@ -13,6 +13,9 @@ Sub Process_Globals
 	Public Manager As BleManager2
 	Public CurrentState As Int
 	Public Rp As RuntimePermissions
+
+	' True if scanning
+	Public Scanning As Boolean
 	
 	' Device name whitelist
 	Private ValidNames As List
@@ -61,16 +64,23 @@ End Sub
 Sub Manager_StateChanged(state As Int)
 	CurrentState = state
 	CallSub(Main, "BleStateChanged")
+	Log("State changed to " & state)
 	FoundDevices.Clear
 End Sub
 
 Sub Manager_DeviceFound(Name As String, Mac As String, AdvertisingData As Map, RSSI As Double)
+	If Not(Scanning) Then
+		Return
+	End If
+
 	If ValidNames.IndexOf(Name) >= 0 Then
 		For Each dev As FoundDevice In FoundDevices
 			If dev.Mac = Mac Then
+				Log("Found known device with MAC " & Mac)
 				Return
 			End If
 		Next
+		Log("Found new device with MAC " & Mac)
 
 		Dim newDev As FoundDevice
 		newDev.Initialize
@@ -123,12 +133,12 @@ End Sub
 
 ' OWN METHODS
 
-Sub ToggleScan(enable As Boolean)
-	If enable Then
+Sub UpdateScanStatus
+	FoundDevices.Clear
+	If Scanning Then
 		Manager.Scan2(Null, True)
 	Else
 		Manager.StopScan()
-		FoundDevices.Clear
 	End If
 End Sub
 

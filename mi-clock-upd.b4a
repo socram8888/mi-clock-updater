@@ -47,20 +47,31 @@ Sub Activity_Create(FirstTime As Boolean)
 End Sub
 
 Sub Activity_Resume
-
 End Sub
 
 Sub Activity_Pause (UserClosed As Boolean)
-
+	Starter.Scanning = False
+	Starter.BatchUpdate = False
+	Starter.UpdateScanStatus
 End Sub
 
 ' SCAN TOGGLE BUTTON CALLBACKS
 
 Sub ScanButton_CheckedChange(checked As Boolean)
-	If Not(checked) Then
-		DeviceList.Clear
+	If checked Then
+		Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
+		Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
+
+		If Not(Result) Then
+			Xui.MsgboxAsync("Permission denied", "Error")
+			Return
+		End If
 	End If
-	Starter.ToggleScan(checked)
+
+	DeviceList.Clear
+	Starter.Scanning = checked
+	UpdateAllButton.Enabled = checked
+	Starter.UpdateScanStatus
 End Sub
 
 ' DEVICE LIST CALLBACKS
@@ -72,15 +83,6 @@ Sub DeviceList_ItemClick(pos As Int, value As Object)
 	End If
 
 	UpdateAllButton.Enabled = False
-
-	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
-	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
-	If Not(Result) Then
-		UpdateAllButton.Enabled = False
-		Xui.MsgboxAsync("Permission denied", "Error")
-		Return
-	End If
-
 	Starter.BatchUpdate = False
 	Starter.UpdateDevice(pos)
 End Sub
@@ -89,16 +91,13 @@ End Sub
 
 Sub UpdateAllButton_Click
 	If Starter.UpdateRunning Then
-		Starter.BatchUpdate = False
-		UpdateAllButton.Enabled = False
-		ToastMessageShow("Stop requested", False)
-		Return
-	End If
-
-	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
-	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
-	If Not(Result) Then
-		Xui.MsgboxAsync("Permission denied", "Error")
+		If Starter.BatchUpdate Then
+			Starter.BatchUpdate = False
+			UpdateAllButton.Enabled = False
+			ToastMessageShow("Stop requested", False)
+		Else
+			Xui.MsgboxAsync("Another update is still running", "Error")
+		End If
 		Return
 	End If
 
