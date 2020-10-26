@@ -11,7 +11,6 @@ Version=10.2
 
 Sub Process_Globals
 	Public Manager As BleManager2
-	Public CurrentState As Int
 	Public Rp As RuntimePermissions
 
 	' True if scanning
@@ -62,7 +61,6 @@ End Sub
 ' MANAGER CALLBACKS
 
 Sub Manager_StateChanged(state As Int)
-	CurrentState = state
 	CallSub(Main, "BleStateChanged")
 	Log("State changed to " & state)
 	FoundDevices.Clear
