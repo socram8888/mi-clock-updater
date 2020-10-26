@@ -30,14 +30,15 @@ Version=10.2
 Sub Process_Globals
 	'These global variables will be declared once when the application starts.
 	'These variables can be accessed from all modules.
-	Private xui As XUI
+	Private Xui As XUI
 End Sub
 
 Sub Globals
 	'These global variables will be redeclared each time the activity is created.
-	Private device_list As ListView
-	Private progress_bar As ProgressBar
-	Private do_button As Button
+	Private DeviceList As ListView
+	Private ScanButton As ToggleButton
+	Private ClearButton As Button
+	Private UpdateAllButton As Button
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
@@ -52,56 +53,98 @@ Sub Activity_Pause (UserClosed As Boolean)
 
 End Sub
 
-Sub do_button_Click
-	do_button.Enabled = False
-	progress_bar.Progress = 0
+' SCAN TOGGLE BUTTON CALLBACKS
 
-	Select Starter.currentState
-		Case Starter.manager.STATE_UNSUPPORTED
-			xui.MsgboxAsync("Error", "Bluetooth not supported")
-			do_button.Enabled = True
-			Return
-			
-		Case Starter.manager.STATE_POWERED_OFF
-			xui.MsgboxAsync("Error", "Bluetooth not enabled")
-			do_button.Enabled = True
-			Return
-	End Select
+Sub ScanButton_CheckedChange(checked As Boolean)
+	Starter.ToggleScan(checked)
+End Sub
 
-	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
-	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
+' CLEAR BUTTON CALLBACKS
 
-	If Result = False Then
-		do_button.Enabled = True
+Sub ClearButton_Click
+	DeviceList.Clear
+	Starter.ClearDevices
+End Sub
+
+' DEVICE LIST CALLBACKS
+
+Sub DeviceList_ItemClick(pos As Int, value As Object)
+	If Starter.UpdateRunning Then
+		Xui.MsgboxAsync("Another update is still running", "Error")
 		Return
 	End If
 
-	Starter.StartUpdate
-	device_list.Clear
+	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
+	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
+	If Not(Result) Then
+		Xui.MsgboxAsync("Permission denied", "Error")
+		Return
+	End If
+
+	ClearButton.Enabled = False
+	UpdateAllButton.Enabled = False
+	Starter.BatchUpdate = False
+	Starter.UpdateDevice(pos)
 End Sub
 
-Sub DeviceFound
-	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
-	device_list.AddTwoLines("🕒 " & dev.Name, dev.Mac)
+' UPDATE ALL CALLBACKS
+
+Sub UpdateAllButton_Click
+	If Starter.UpdateRunning Then
+		Starter.BatchUpdate = False
+		UpdateAllButton.Enabled = False
+		ToastMessageShow("Stop requested", False)
+		Return
+	End If
+
+	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
+	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
+	If Not(Result) Then
+		Xui.MsgboxAsync("Permission denied", "Error")
+		Return
+	End If
+
+	ClearButton.Enabled = False
+	UpdateAllButton.Text = "Abort batch update"
+	Starter.UpdateAllDevices
 End Sub
 
-Sub DeviceSucceeded
-	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
-	device_list.RemoveAt(device_list.Size - 1)
-	device_list.AddTwoLines("✔️ " & dev.Name, dev.Mac)
+' CUSTOM MVC SUBS
+
+Sub BleStateChanged
+	Select Starter.currentState
+		Case Starter.manager.STATE_UNSUPPORTED
+			Xui.MsgboxAsync("Error", "Bluetooth not supported")
+			ScanButton.Checked = False
+			ScanButton.Enabled = False
+			ClearButton.Enabled = False
+			DeviceList.Clear
+			UpdateAllButton.Enabled = False
+			
+		Case Starter.manager.STATE_POWERED_OFF
+			Xui.MsgboxAsync("Error", "Bluetooth not enabled")
+			ScanButton.Checked = False
+			ScanButton.Enabled = False
+			ClearButton.Enabled = False
+			DeviceList.Clear
+			UpdateAllButton.Enabled = False
+
+		Case Starter.manager.STATE_POWERED_ON
+			ScanButton.Checked = False
+			ScanButton.Enabled = True
+			ClearButton.Enabled = True
+			DeviceList.Clear
+			UpdateAllButton.Enabled = True
+	End Select
 End Sub
 
-Sub DeviceFailed
-	Dim dev As FoundDevice = Starter.foundDevices.Get(Starter.currentDevice)
-	device_list.RemoveAt(device_list.Size - 1)
-	device_list.AddTwoLines("❌ " & dev.Name, dev.Mac)
+Sub NewDeviceFound
+	Dim dev As FoundDevice = Starter.FoundDevices.Get(Starter.FoundDevices.Size - 1)
+	DeviceList.AddTwoLines(dev.Name, dev.Mac)
 End Sub
 
-Sub UpdateAborted
-	xui.MsgboxAsync("Error", "Update aborted")
-	do_button.Enabled = True
-End Sub
-
-Sub FinishedProcessing
-	do_button.Enabled = True
+Sub UpdateFinished
+	ClearButton.Enabled = True
+	UpdateAllButton.Text = "Update all"
+	UpdateAllButton.Enabled = True
 End Sub
