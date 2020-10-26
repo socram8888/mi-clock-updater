@@ -37,7 +37,6 @@ Sub Globals
 	'These global variables will be redeclared each time the activity is created.
 	Private DeviceList As ListView
 	Private ScanButton As ToggleButton
-	Private ClearButton As Button
 	Private UpdateAllButton As Button
 End Sub
 
@@ -56,14 +55,10 @@ End Sub
 ' SCAN TOGGLE BUTTON CALLBACKS
 
 Sub ScanButton_CheckedChange(checked As Boolean)
+	If Not(checked) Then
+		DeviceList.Clear
+	End If
 	Starter.ToggleScan(checked)
-End Sub
-
-' CLEAR BUTTON CALLBACKS
-
-Sub ClearButton_Click
-	DeviceList.Clear
-	Starter.ClearDevices
 End Sub
 
 ' DEVICE LIST CALLBACKS
@@ -74,15 +69,16 @@ Sub DeviceList_ItemClick(pos As Int, value As Object)
 		Return
 	End If
 
+	UpdateAllButton.Enabled = False
+
 	Starter.rp.CheckAndRequest(Starter.rp.PERMISSION_ACCESS_FINE_LOCATION)
 	Wait For Activity_PermissionResult (Permission As String, Result As Boolean)
 	If Not(Result) Then
+		UpdateAllButton.Enabled = False
 		Xui.MsgboxAsync("Permission denied", "Error")
 		Return
 	End If
 
-	ClearButton.Enabled = False
-	UpdateAllButton.Enabled = False
 	Starter.BatchUpdate = False
 	Starter.UpdateDevice(pos)
 End Sub
@@ -104,7 +100,6 @@ Sub UpdateAllButton_Click
 		Return
 	End If
 
-	ClearButton.Enabled = False
 	UpdateAllButton.Text = "Abort batch update"
 	Starter.UpdateAllDevices
 End Sub
@@ -112,28 +107,22 @@ End Sub
 ' CUSTOM MVC SUBS
 
 Sub BleStateChanged
+	DeviceList.Clear
+	ScanButton.Checked = False
+
 	Select Starter.currentState
 		Case Starter.manager.STATE_UNSUPPORTED
-			Xui.MsgboxAsync("Error", "Bluetooth not supported")
-			ScanButton.Checked = False
+			Xui.MsgboxAsync("Bluetooth not supported", "Error")
 			ScanButton.Enabled = False
-			ClearButton.Enabled = False
-			DeviceList.Clear
 			UpdateAllButton.Enabled = False
 			
 		Case Starter.manager.STATE_POWERED_OFF
-			Xui.MsgboxAsync("Error", "Bluetooth not enabled")
-			ScanButton.Checked = False
+			Xui.MsgboxAsync("Bluetooth not enabled", "Error")
 			ScanButton.Enabled = False
-			ClearButton.Enabled = False
-			DeviceList.Clear
 			UpdateAllButton.Enabled = False
 
 		Case Starter.manager.STATE_POWERED_ON
-			ScanButton.Checked = False
 			ScanButton.Enabled = True
-			ClearButton.Enabled = True
-			DeviceList.Clear
 			UpdateAllButton.Enabled = True
 	End Select
 End Sub
@@ -144,7 +133,6 @@ Sub NewDeviceFound
 End Sub
 
 Sub UpdateFinished
-	ClearButton.Enabled = True
 	UpdateAllButton.Text = "Update all"
 	UpdateAllButton.Enabled = True
 End Sub

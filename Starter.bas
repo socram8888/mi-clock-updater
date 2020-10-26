@@ -61,6 +61,7 @@ End Sub
 Sub Manager_StateChanged(state As Int)
 	CurrentState = state
 	CallSub(Main, "BleStateChanged")
+	FoundDevices.Clear
 End Sub
 
 Sub Manager_DeviceFound(Name As String, Mac As String, AdvertisingData As Map, RSSI As Double)
@@ -127,11 +128,8 @@ Sub ToggleScan(enable As Boolean)
 		Manager.Scan2(Null, True)
 	Else
 		Manager.StopScan()
+		FoundDevices.Clear
 	End If
-End Sub
-
-Sub ClearDevices
-	FoundDevices.Clear
 End Sub
 
 Sub UpdateDevice(pos As Int)
