@@ -47,6 +47,8 @@ Sub Activity_Create(FirstTime As Boolean)
 End Sub
 
 Sub Activity_Resume
+	BleStateChanged
+	DeviceList.Clear
 End Sub
 
 Sub Activity_Pause (UserClosed As Boolean)
@@ -110,21 +112,19 @@ End Sub
 Sub BleStateChanged
 	DeviceList.Clear
 	ScanButton.Checked = False
+	UpdateAllButton.Enabled = False
 
-	Select Starter.currentState
+	Select Starter.Manager.State
 		Case Starter.manager.STATE_UNSUPPORTED
 			Xui.MsgboxAsync("Bluetooth not supported", "Error")
 			ScanButton.Enabled = False
-			UpdateAllButton.Enabled = False
 			
 		Case Starter.manager.STATE_POWERED_OFF
 			Xui.MsgboxAsync("Bluetooth not enabled", "Error")
 			ScanButton.Enabled = False
-			UpdateAllButton.Enabled = False
 
 		Case Starter.manager.STATE_POWERED_ON
 			ScanButton.Enabled = True
-			UpdateAllButton.Enabled = True
 	End Select
 End Sub
 
