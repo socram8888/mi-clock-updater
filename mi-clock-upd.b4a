@@ -42,6 +42,8 @@ End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
 	Activity.LoadLayout("MainLayout")
+	DeviceList.TwoLinesLayout.Label.TextColor = Colors.Black
+	DeviceList.TwoLinesLayout.SecondLabel.TextColor = Colors.Black
 End Sub
 
 Sub Activity_Resume
